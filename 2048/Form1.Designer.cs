@@ -114,6 +114,7 @@
             this.BestScoreText.TabIndex = 2;
             this.BestScoreText.Text = "0";
             this.BestScoreText.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.BestScoreText.Click += new System.EventHandler(this.BestScoreText_Click);
             // 
             // NewGameButton
             // 

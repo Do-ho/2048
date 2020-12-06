@@ -8,11 +8,13 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using MySql.Data.MySqlClient;
+
 namespace _2048
 {
     public partial class Form1 : Form
     {
-        
+        MySqlConnection connection = new MySqlConnection("Server=localhost;Port=13305;Database=2048_db;Uid=doho;Pwd=password;Charset=utf8;");
         Label[,] blockArr;
         int[,] valueArr;
         Dictionary<int, Color> bgColor = new Dictionary<int, Color>
@@ -44,7 +46,30 @@ namespace _2048
             InitializeComponent();
             InitValues();
             CreateBlock();
+            InitGreatScore();
             Display();
+        }
+
+        private void InitGreatScore()
+        {
+            string selectQuery = "SELECT score from scoreboard";
+            connection.Open();
+            MySqlCommand command = new MySqlCommand(selectQuery, connection);
+            MySqlDataReader table = command.ExecuteReader();
+            int maxValue = 0;
+            
+            while(table.Read())
+            {
+                int score = int.Parse(table["score"].ToString());
+                if (maxValue < score)
+                {
+                    maxValue = score;
+                }
+            }
+
+            BestScoreText.Text = maxValue.ToString();
+
+            connection.Close();
         }
         private bool IsEmptyBlock(Point p)
         {
@@ -136,6 +161,22 @@ namespace _2048
             this.KeyPreview = true;
         }
 
+        private bool isEnd()
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                for (int j = 0; j < 4; j++)
+                {
+                    if (valueArr[i, j] == 0) return false;
+                    if (i - 1 >= 0 && valueArr[i, j] == valueArr[i - 1, j]) return false;
+                    if (i + 1 < 4 && valueArr[i, j] == valueArr[i + 1, j]) return false;
+                    if (j - 1 >= 0 && valueArr[i, j] == valueArr[i, j - 1]) return false;
+                    if (j + 1 < 4 && valueArr[i, j] == valueArr[i, j + 1]) return false;
+                }
+            }
+            return true;
+        }
+
         private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
             switch(e.KeyCode.ToString())
@@ -155,6 +196,18 @@ namespace _2048
             }
             CreateBlock();
             Display();
+            if (isEnd())
+            {
+                MessageBox.Show("더이상 이동할 곳이 없어 게임을 종료합니다.");
+                string username = Microsoft.VisualBasic.Interaction.InputBox("사용자 이름을 입력해주세요", "사용자 이름 입력", "홍길동");
+                int score = int.Parse(ScoreText.Text);
+                InsertScore(username, score);
+                ClearScore();
+                InitValues();
+                CreateBlock();
+                InitGreatScore();
+                Display();
+            }
         }
 
         private void RightKeyDown()
@@ -286,6 +339,24 @@ namespace _2048
         {
             ScoreText.Text = "0";
         }
+        private void InsertScore(string nickname, int score)
+        {
+            string insertQuery = "INSERT INTO scoreboard(nickname, score) VALUES('" + nickname + "', " + score + ")";
+            connection.Open();
+            MySqlCommand command = new MySqlCommand(insertQuery, connection);
+
+            try
+            {
+                if (command.ExecuteNonQuery() == 1) MessageBox.Show("랭킹이 저장되었습니다.");
+                else MessageBox.Show("비정상적인 접근입니다.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+
+            connection.Close();
+        }
 
         private void NewGameButton_Click(object sender, EventArgs e)
         {
@@ -293,6 +364,12 @@ namespace _2048
             InitValues();
             CreateBlock();
             Display();
+        }
+
+        private void BestScoreText_Click(object sender, EventArgs e)
+        {
+            Form2 form = new Form2();
+            form.Show();
         }
     }
     public class Point
